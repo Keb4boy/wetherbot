@@ -14,19 +14,9 @@ def get_kb() -> ReplyKeyboardMarkup:
     kb.add(KeyboardButton("Moscow"), ("London"), ("Saint-Petersburg"), ("Paris"), ("Rome"))
     return kb
 
-inline_btn_1 = InlineKeyboardButton('Летс гоу', callback_data='/check')
-inline_kb1 = InlineKeyboardMarkup().add(inline_btn_1)
 
-def get_city() -> ReplyKeyboardMarkup:
-    ct = ReplyKeyboardMarkup(resize_keyboard=True)
-    ct.add(KeyboardButton("London"))
-    return ct
 
-# button_ln = KeyboardButton("London")
-# city_button = ReplyKeyboardMarkup()
-# city_button.add(button_ln)
-
-def locate(city, start, end):
+def get_params(city, start, end, year):
 
     geolocator = Nominatim(user_agent="weather_bot")
 
@@ -34,15 +24,14 @@ def locate(city, start, end):
 
     params = {"latitude":location.latitude,
               "longitude":location.longitude,
-              "start_date":f"2000-{start}",
-              "end_date":f"2000-{end}",
+              "start_date":f"{year}-{start}",
+              "end_date":f"{year}-{end}",
               "daily":["temperature_2m_max", "temperature_2m_min"],
               "timezone":"auto"}
     return params
 
 
-
-def weather(par):
+def get_request(par):
     weather_site = requests.get("https://archive-api.open-meteo.com/v1/archive", params = par).json()
     return weather_site
 
@@ -58,23 +47,21 @@ def max(weath):
     max_list = []
     for maximum in weath["daily"]['temperature_2m_max']:
         max_list.append(maximum)
-    return sum(max_list) // len(max_list)
+    return sum(max_list) / len(max_list)
 
 
 def min(weath):
     min_list = []
     for minimum in weath["daily"]['temperature_2m_min']:
         min_list.append(minimum)
-    return sum(min_list) // len(min_list)
+    return sum(min_list) / len(min_list)
 
-def temp(city, start, end):
-    location = weather(locate(city, start, end))
-    return f"Средняя максимальная температура в эти дни: {max(location)}\nСредняя минимальная температура в эти дни:{min(location)}"
+def main(city, start, end):
+    for year in range(2000, 2021):
+        value = get_request(get_params(city, start, end, year))
+        print(value)
+    return f"Средняя максимальная температура в эти дни: {max(value)}\nСредняя минимальная температура в эти дни:{min(value)}"
 
-# def count():
-# print(date(location))
-# print(max(location))
-# print(min(location))
 
 
 logging.basicConfig(level=logging.INFO)
@@ -105,7 +92,7 @@ async def get_city(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["city"] = message.text
 
-    await message.reply("Напишите дату в формате 2000-01-01, с начала которой хотите получить погоду")
+    await message.reply("Напишите дату в формате 01-01, с начала которой хотите получить погоду")
     await group.next()
 
 
@@ -123,14 +110,11 @@ async def get_end(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["end_date"] = message.text
 
-    await message.reply("Сейчас звгружу информацию.....")
+    await message.reply("Сейчас загружу информацию.....")
     await state.finish()
-    await message.reply(temp(data.get("city"), data.get('start_date'), data.get('end_date')))
+    await message.reply(main(data.get("city"), data.get('start_date'), data.get('end_date')))
     print(list(data.items()))
 
-# @dp.message_handler()
-# async def result(message: types.Message)
-#     await message.reply()
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
