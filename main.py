@@ -1,4 +1,4 @@
-import requests
+
 from geopy.geocoders import Nominatim
 import logging
 from aiogram import Bot, Dispatcher, executor, types
@@ -7,59 +7,74 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
 from TOKEN import API_TOKEN
+import grequests
 
 
-def get_kb() -> ReplyKeyboardMarkup:
+def get_keyboard() -> ReplyKeyboardMarkup:
+    # функция для создания клавиатуры
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     kb.add(KeyboardButton("Moscow"), ("London"), ("Saint-Petersburg"), ("Paris"), ("Rome"))
     return kb
 
+def get_cmdcheck() -> ReplyKeyboardMarkup:
+    # функция для создания клавиатуры
+    kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    kb.add(KeyboardButton("/check"))
+    return kb
 
-
-def get_params(city, start, end, year):
-
+def get_params(city, start, end):
+    # функция для создания словаря
     geolocator = Nominatim(user_agent="weather_bot")
 
     location = geolocator.geocode(city)
 
-    params = {"latitude":location.latitude,
-              "longitude":location.longitude,
-              "start_date":f"{year}-{start}",
-              "end_date":f"{year}-{end}",
-              "daily":["temperature_2m_max", "temperature_2m_min"],
-              "timezone":"auto"}
-    return params
+    params = {"latitude": location.latitude,
+              "longitude": location.longitude,
+              "daily": ["temperature_2m_max", "temperature_2m_min"],
+              "timezone": "auto"}
+
+    dates = []
+    for year in range(2010, 2021):
+        params2 = {"start_date": f"{year}-{start}",
+                   "end_date": f"{year}-{end}"}
+        params2.update(params)
+        dates.append(params2)
+
+
+
+    return dates
 
 
 def get_request(par):
-    weather_site = requests.get("https://archive-api.open-meteo.com/v1/archive", params = par).json()
-    return weather_site
+    all_dates = []
+    session = grequests.Session()
+    for param in par:
+        # функция для обращения к сайту
+        weather_site = session.get("https://archive-api.open-meteo.com/v1/archive", params=param).json()
+        all_dates.append(weather_site)
+
+    return all_dates
 
 
-def date(weath):
-    date_list = []
-    for date_zone in weath["daily"]["time"]:
-        date_list.append(date_zone)
-    return date_list
-
-
-def max(weath):
+def get_max(weath):
+    # функция для вычисления среднего значения максимальной температуры
     max_list = []
     for maximum in weath["daily"]['temperature_2m_max']:
         max_list.append(maximum)
     return sum(max_list) / len(max_list)
 
 
-def min(weath):
+def get_min(weath):
+    # функция для вычисления среднего значения минимальной температуры
     min_list = []
     for minimum in weath["daily"]['temperature_2m_min']:
         min_list.append(minimum)
     return sum(min_list) / len(min_list)
 
+
 def main(city, start, end):
-    for year in range(2000, 2021):
-        value = get_request(get_params(city, start, end, year))
-        print(value)
+    value = get_request(get_params(city, start, end, year))
+    print(value)
     return f"Средняя максимальная температура в эти дни: {max(value)}\nСредняя минимальная температура в эти дни:{min(value)}"
 
 
@@ -79,12 +94,12 @@ class group(StatesGroup):
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
 
-    await message.reply("Я бот, который поможет тебе узнать погоду.\nДля того чтобы начать нажми /check")
+    await message.reply("Я бот, который поможет тебе узнать погоду.\nДля того чтобы начать нажми /check", reply_markup=get_cmdcheck())
 
 @dp.message_handler(commands=['check'])
 async def cmd_get(message: types.Message):
 
-    await message.reply("Для начала укажи город который тебя интересует", reply_markup=get_kb())
+    await message.reply("Для начала укажи город который тебя интересует", reply_markup=get_keyboard())
     await group.city.set()
 
 @dp.message_handler(state=group.city)
@@ -97,7 +112,7 @@ async def get_city(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(state=group.start_date)
-async def get_start(message: types.Message, state: FSMContext):
+async def get_startdate(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["start_date"] = message.text
 
@@ -106,7 +121,7 @@ async def get_start(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(state=group.end_date)
-async def get_end(message: types.Message, state: FSMContext):
+async def get_endate(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["end_date"] = message.text
 
