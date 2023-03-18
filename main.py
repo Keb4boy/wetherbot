@@ -124,7 +124,7 @@ async def get_city(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["city"] = message.text
 
-    await message.reply("Напишите дату в формате 01-01, с начала которой хотите получить погоду")
+    await message.reply("Напишите дату в формате 01-01 (месяц-день), с начала которой хотите получить погоду")
     await group.next()
 
 
@@ -145,7 +145,7 @@ async def get_endate(message: types.Message, state: FSMContext):
     await message.reply("Сейчас загружу информацию.....")
     await state.finish()
     await message.reply(main(data.get("city"), data.get('start_date'), data.get('end_date')), reply_markup=get_cmdstart())
-    print(list(data.items()))
+
 
 
 if __name__ == '__main__':
