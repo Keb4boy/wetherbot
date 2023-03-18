@@ -7,7 +7,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
 from TOKEN import API_TOKEN
-import grequests
+import requests
 
 
 def get_keyboard() -> ReplyKeyboardMarkup:
@@ -22,8 +22,14 @@ def get_cmdcheck() -> ReplyKeyboardMarkup:
     kb.add(KeyboardButton("/check"))
     return kb
 
+def get_cmdstart() -> ReplyKeyboardMarkup:
+    # функция для создания клавиатуры
+    kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    kb.add(KeyboardButton("/start"))
+    return kb
 def get_params(city, start, end):
     # функция для создания словаря
+    dates = []
     geolocator = Nominatim(user_agent="weather_bot")
 
     location = geolocator.geocode(city)
@@ -33,35 +39,33 @@ def get_params(city, start, end):
               "daily": ["temperature_2m_max", "temperature_2m_min"],
               "timezone": "auto"}
 
-    dates = []
-    for year in range(2010, 2021):
+    for year in range(2013, 2023):
         params2 = {"start_date": f"{year}-{start}",
                    "end_date": f"{year}-{end}"}
+
         params2.update(params)
+
         dates.append(params2)
-
-
 
     return dates
 
 
 def get_request(par):
     all_dates = []
-    session = grequests.Session()
+    session = requests.Session()
     for param in par:
         # функция для обращения к сайту
         weather_site = session.get("https://archive-api.open-meteo.com/v1/archive", params=param).json()
+
         all_dates.append(weather_site)
 
     return all_dates
-
-
 def get_max(weath):
     # функция для вычисления среднего значения максимальной температуры
     max_list = []
     for maximum in weath["daily"]['temperature_2m_max']:
         max_list.append(maximum)
-    return sum(max_list) / len(max_list)
+    return max(max_list)
 
 
 def get_min(weath):
@@ -69,13 +73,26 @@ def get_min(weath):
     min_list = []
     for minimum in weath["daily"]['temperature_2m_min']:
         min_list.append(minimum)
-    return sum(min_list) / len(min_list)
+    return min(min_list)
 
+def get_average(weath):
+    ave_list = []
+    for ave in weath["daily"]['temperature_2m_min']:
+        ave_list.append(ave)
+    return sum(ave_list) // len(ave_list)
 
 def main(city, start, end):
-    value = get_request(get_params(city, start, end, year))
-    print(value)
-    return f"Средняя максимальная температура в эти дни: {max(value)}\nСредняя минимальная температура в эти дни:{min(value)}"
+    minimum = []
+    maximum = []
+    average = []
+    value = get_request(get_params(city, start, end))
+    for val in value:
+
+        minimum.append(round(get_min(val)))
+        maximum.append(round(get_max(val)))
+        average.append(round(get_average(val)))
+
+    return f"Температура в эти дни от {min(minimum)} до {max(maximum)}\nСредняя температура примерно:{sum(average) // len(average)}"
 
 
 
@@ -127,7 +144,7 @@ async def get_endate(message: types.Message, state: FSMContext):
 
     await message.reply("Сейчас загружу информацию.....")
     await state.finish()
-    await message.reply(main(data.get("city"), data.get('start_date'), data.get('end_date')))
+    await message.reply(main(data.get("city"), data.get('start_date'), data.get('end_date')), reply_markup=get_cmdstart())
     print(list(data.items()))
 
 
