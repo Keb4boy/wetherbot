@@ -1,14 +1,15 @@
-
+import aiohttp
 from geopy.geocoders import Nominatim
 import logging
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.dispatcher import FSMContext
-from TOKEN import API_TOKEN
-import requests
+import asyncio
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def get_keyboard() -> ReplyKeyboardMarkup:
     # функция для создания клавиатуры
@@ -49,17 +50,17 @@ def get_params(city, start, end):
 
     return dates
 
+async def fetch_result(session, params):
+    async with session.get('https://archive-api.open-meteo.com/v1/archive', params=params) as result:
+        return await result.json()
+async def get_request(all_params):
+    async with aiohttp.ClientSession() as session:
+        requests = [fetch_result(session, params) for params in all_params]
+        result = await asyncio.gather(*requests, return_exceptions=False)
 
-def get_request(par):
-    all_dates = []
-    session = requests.Session()
-    for param in par:
-        # функция для обращения к сайту
-        weather_site = session.get("https://archive-api.open-meteo.com/v1/archive", params=param).json()
+        return result
 
-        all_dates.append(weather_site)
 
-    return all_dates
 def get_max(weath):
     # функция для вычисления среднего значения максимальной температуры
     max_list = []
@@ -85,7 +86,7 @@ def main(city, start, end):
     minimum = []
     maximum = []
     average = []
-    value = get_request(get_params(city, start, end))
+    value = asyncio.run(get_request(get_params(city, start, end)))
     for val in value:
 
         minimum.append(round(get_min(val)))

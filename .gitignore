@@ -2,3 +2,4 @@
 *cache*
 TOKEN.py
 poetry.lock
+.env
