@@ -8,8 +8,11 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.dispatcher import FSMContext
 import asyncio
 from dotenv import load_dotenv
+import os
+
 
 load_dotenv()
+API_TOKEN=os.environ.get("API_TOKEN")
 
 def get_keyboard() -> ReplyKeyboardMarkup:
     # функция для создания клавиатуры
