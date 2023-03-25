@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import os
 
 
+
 load_dotenv()
 API_TOKEN=os.environ.get("API_TOKEN")
 
@@ -43,7 +44,7 @@ def get_params(city, start, end):
               "daily": ["temperature_2m_max", "temperature_2m_min"],
               "timezone": "auto"}
 
-    for year in range(2013, 2023):
+    for year in range(2020, 2023):
         params2 = {"start_date": f"{year}-{start}",
                    "end_date": f"{year}-{end}"}
 
@@ -85,18 +86,18 @@ def get_average(weath):
         ave_list.append(ave)
     return sum(ave_list) // len(ave_list)
 
-def main(city, start, end):
-    minimum = []
-    maximum = []
-    average = []
-    value = asyncio.run(get_request(get_params(city, start, end)))
-    for val in value:
+async def main(city, start, end):
+        minimum = []
+        maximum = []
+        average = []
+        value = await get_request(get_params(city, start, end))
+        for val in value:
 
-        minimum.append(round(get_min(val)))
-        maximum.append(round(get_max(val)))
-        average.append(round(get_average(val)))
+            minimum.append(round(get_min(val)))
+            maximum.append(round(get_max(val)))
+            average.append(round(get_average(val)))
 
-    return f"Температура в эти дни от {min(minimum)} до {max(maximum)}\nСредняя температура примерно:{sum(average) // len(average)}"
+        return f"Температура в эти дни от {min(minimum)} до {max(maximum)}\nСредняя температура примерно:{sum(average) // len(average)}"
 
 
 
@@ -148,7 +149,7 @@ async def get_endate(message: types.Message, state: FSMContext):
 
     await message.reply("Сейчас загружу информацию.....")
     await state.finish()
-    await message.reply(main(data.get("city"), data.get('start_date'), data.get('end_date')), reply_markup=get_cmdstart())
+    await message.reply(await main(data.get("city"), data.get('start_date'), data.get('end_date')))
 
 
 
