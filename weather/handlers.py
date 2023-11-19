@@ -1,6 +1,6 @@
 from aiogram import types, Router
 from .func import get_values
-# from .kb import get_cmdcheck, get_keyboard
+from .kb import get_cmdcheck#, get_keyboard
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -16,10 +16,10 @@ class Group(StatesGroup):
 
 
 
-# @router.message(Command("start"))
-# async def send_welcome(msg: Message):
+@router.message(Command("start"))
+async def send_welcome(msg: Message):
 
-#     await msg.answer("Я бот, который поможет тебе узнать погоду.\nДля того чтобы начать нажми /check", reply_markup=get_cmdcheck())
+    await msg.answer("Я бот, который поможет тебе узнать погоду.\nДля того чтобы начать нажми /check", reply_markup=get_cmdcheck())
 
 # @router.message(Command("check"))
 # async def cmd_get(msg: Message):
